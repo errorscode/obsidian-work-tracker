@@ -1,4 +1,4 @@
-markdown
+
 # Obsidian Work Tracker (Heatmap)
 
 This simple Obsidian plugin renders a GitHub-style calendar heatmap showing per-day activity for Markdown files in your vault.
@@ -21,4 +21,5 @@ This simple Obsidian plugin renders a GitHub-style calendar heatmap showing per-
    ```
 4. Copy the produced plugin folder (with `manifest.json` and `dist/main.js`) into your vault's `.obsidian/plugins/obsidian-work-tracker/` folder.
 5. Reload Obsidian, then enable the plugin in Settings → Community plugins.
+
 

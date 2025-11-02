@@ -1,0 +1,18 @@
+
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "ESNext",
+    "lib": ["ES2019", "DOM"],
+    "declaration": false,
+    "outDir": "dist",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "resolveJsonModule": true,
+	"types": ["obsidian"]
+
+  },
+  "include": ["src"]
+}

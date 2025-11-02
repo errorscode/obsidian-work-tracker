@@ -1,0 +1,11 @@
+{
+  "id": "obsidian-work-tracker",
+  "name": "Work Tracker (Heatmap)",
+  "version": "0.1.0",
+  "minAppVersion": "0.15.0",
+  "author": "Generated",
+  "description": "A calendar heatmap (GitHub-style) that shows per-day activity in your vault.",
+  "main": "dist/main.js",
+  "authorUrl": "",
+  "isDesktopOnly": false
+}

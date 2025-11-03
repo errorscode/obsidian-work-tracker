@@ -1,68 +1,124 @@
+// view.ts
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import WorkTrackerPlugin from './main';
 import { VIEW_TYPE_WORK_TRACKER } from './main';
 import { buildHeatmapSVG } from './heatmap';
 
 export class WorkTrackerView extends ItemView {
-    plugin: WorkTrackerPlugin;
-    containerEl: HTMLElement;
+  plugin: WorkTrackerPlugin;
 
-    constructor(leaf: WorkspaceLeaf, plugin: WorkTrackerPlugin) {
-        super(leaf);
-        this.plugin = plugin;
-        this.containerEl = this.contentEl;
-    }
+  constructor(leaf: WorkspaceLeaf, plugin: WorkTrackerPlugin) {
+    super(leaf);
+    this.plugin = plugin;
+    this.containerEl.addClass('work-tracker-container');
+  }
 
-    getViewType(): string {
-        return VIEW_TYPE_WORK_TRACKER;
-    }
+  getViewType(): string {
+    return VIEW_TYPE_WORK_TRACKER;
+  }
 
-    getDisplayText(): string {
-        return 'Work Tracker';
-    }
+  getDisplayText(): string {
+    return 'Work Tracker';
+  }
 
-    async onOpen(): Promise<void> {
-        this.renderModeSelector();
+  async onOpen(): Promise<void> {
+    this.renderModeSelector();
+    this.renderHeatmap();
+  }
+
+  async onClose(): Promise<void> {
+    // Cleanup if needed
+  }
+
+  renderModeSelector() {
+    const selector = this.containerEl.createEl('div', {
+      cls: 'work-tracker-mode-selector'
+    });
+
+    ['week', 'month', 'year'].forEach(mode => {
+      const btn = selector.createEl('button', {
+        text: mode.charAt(0).toUpperCase() + mode.slice(1)
+      });
+
+      if (mode === this.plugin.currentMode) {
+        btn.addClass('active');
+      }
+
+      btn.addEventListener('click', () => {
+        // Remove active class from all buttons - FIXED TYPE
+        selector.findAll('button').forEach((b: HTMLElement) => {
+          b.removeClass('active');
+        });
+        // Add active class to clicked button
+        btn.addClass('active');
+
+        this.plugin.currentMode = mode as 'week' | 'month' | 'year';
         this.renderHeatmap();
+      });
+    });
+  }
+
+  renderHeatmap() {
+    // Clear existing heatmap (keep mode selector intact)
+    const existingSvg = this.containerEl.querySelector('.work-tracker-heatmap');
+    if (existingSvg) {
+      existingSvg.remove();
     }
 
-    async onClose(): Promise<void> {
-        // Cleanup if needed
-    }
+    // Get activity data
+    const activity: Record<string, number> = this.getActivityData();
+    const svg = buildHeatmapSVG(
+      activity, 
+      this.plugin.settings,
+      this.plugin.currentMode
+    );
+    
+    // Create container for heatmap
+    const heatmapContainer = this.containerEl.createEl('div', {
+      cls: 'work-tracker-heatmap'
+    });
+    heatmapContainer.innerHTML = svg;
+  }
 
-    renderModeSelector() {
-        const selector = this.containerEl.createEl('div', { cls: 'work-tracker-mode-selector' });
-        ['week', 'month', 'year'].forEach(mode => {
-            const btn = selector.createEl('button', { text: mode[0].toUpperCase() + mode.slice(1) });
-            btn.addEventListener('click', () => {
-                this.plugin.currentMode = mode as 'week' | 'month' | 'year';
-                this.renderHeatmap();
-            });
-        });
-    }
+  getActivityData(): Record<string, number> {
+    const data: Record<string, number> = {};
+    const files = this.app.vault.getFiles().filter(f => {
+      // Use settings to filter file types
+      if (this.plugin.settings.trackAllFileTypes) return true;
+      return this.plugin.settings.includeFileTypes.includes(f.extension);
+    });
+    
+    files.forEach(f => {
+      // Check if file should be excluded
+      if (this.plugin.settings.excludePaths.some(path => f.path.startsWith(path))) {
+        return;
+      }
+      
+      if (this.plugin.settings.excludeFileTypes.includes(f.extension)) {
+        return;
+      }
 
-    renderHeatmap() {
-        // Clear existing heatmap (keep mode selector intact)
-        const existingSvg = this.containerEl.querySelector('svg');
-        if (existingSvg) existingSvg.remove();
-
-        // Get activity data (example: count edits per day from your vault)
-        const activity: Record<string, number> = this.getActivityData();
-
-        const svg = buildHeatmapSVG(activity, this.plugin.settings.colors, this.plugin.currentMode);
-        this.containerEl.insertAdjacentHTML('beforeend', svg);
-    }
-
-    getActivityData(): Record<string, number> {
-        const data: Record<string, number> = {};
-        const files = this.app.vault.getFiles().filter(f => f.extension === 'md');
-        files.forEach(f => {
-            const modDate = f.stat.mtime; // last modified timestamp in ms
-            const d = new Date(modDate);
-            const iso = d.toISOString().slice(0, 10);
-            if (!data[iso]) data[iso] = 0;
-            data[iso]++;
-        });
-        return data;
-    }
+      let dateToUse: number | null = null;
+      
+      if (this.plugin.settings.trackModificationDates) {
+        dateToUse = f.stat.mtime;
+      }
+      
+      if (this.plugin.settings.trackCreationDates && !dateToUse) {
+        dateToUse = f.stat.ctime;
+      }
+      
+      if (dateToUse) {
+        const d = new Date(dateToUse);
+        const iso = d.toISOString().slice(0, 10);
+        
+        if (!data[iso]) {
+          data[iso] = 0;
+        }
+        data[iso]++;
+      }
+    });
+    
+    return data;
+  }
 }
